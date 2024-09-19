@@ -3,6 +3,7 @@ import { existsSync, readFileSync, rmSync } from 'node:fs'
 import bunBuildPlugin from '../src/adapter/bun'
 import cloudflarePagesPlugin from '../src/adapter/cloudflare-pages'
 import denoBuildPlugin from '../src/adapter/deno'
+import vercelBuildPlugin from '../src/adapter/vercel'
 
 describe('Build Plugin with Bun Adapter', () => {
   const testDir = './test/mocks/app-static-files'
@@ -153,6 +154,42 @@ describe('Build Plugin with Deno Adapter', () => {
     expect(outputFooTxt).toContain('foo')
 
     const outputJsClientJs = readFileSync(`${testDir}/dist/js/client.js`, 'utf-8')
+    // eslint-disable-next-line quotes
+    expect(outputJsClientJs).toContain("console.log('foo')")
+  })
+})
+
+describe('Build Plugin with Vercel Adapter', () => {
+  const testDir = './test/mocks/app-static-files'
+  const entry = './src/server.ts'
+
+  afterEach(() => {
+    rmSync(`${testDir}/dist`, { recursive: true, force: true })
+    rmSync(`${testDir}/.vercel`, { recursive: true, force: true })
+  })
+
+  it('Should build the project correctly with the plugin', async () => {
+    const outputDir = `${testDir}/.vercel`
+    const outputFile = `${testDir}/.vercel/output/functions/index.func/index.js`
+
+    await build({
+      root: testDir,
+      plugins: [
+        vercelBuildPlugin({
+          entry,
+        }),
+      ],
+    })
+
+    expect(existsSync(outputDir)).toBe(true)
+
+    const output = readFileSync(outputFile, 'utf-8')
+    expect(output).toContain('Hello World')
+
+    const outputFooTxt = readFileSync(`${testDir}/.vercel/output/static/foo.txt`, 'utf-8')
+    expect(outputFooTxt).toContain('foo')
+
+    const outputJsClientJs = readFileSync(`${testDir}/.vercel/output/static/js/client.js`, 'utf-8')
     // eslint-disable-next-line quotes
     expect(outputJsClientJs).toContain("console.log('foo')")
   })
